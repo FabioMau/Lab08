@@ -63,6 +63,34 @@ public class ExtFlightDelaysDAO {
 		}
 	}
 
+	// load All Airports With At Least One Flight
+	
+	public List<Airport> loadAllAirportsWALOF() {
+		String sql = "SELECT A.* FROM airports A JOIN flights F ON A.ID = F.ORIGIN_AIRPORT_ID || A.ID = F.DESTINATION_AIRPORT_ID GROUP BY A.ID HAVING COUNT(F.ID) > 0;";
+		List<Airport> result = new ArrayList<Airport>();
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
+						rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
+						rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
+				result.add(airport);
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
 	public List<Flight> loadAllFlights() {
 		String sql = "SELECT * FROM flights";
 		List<Flight> result = new LinkedList<Flight>();
@@ -91,4 +119,32 @@ public class ExtFlightDelaysDAO {
 			throw new RuntimeException("Error Connection Database");
 		}
 	}
+	
+	public Double avgFlightDistanceBetweenAirports(Airport airport_origin, Airport airport_destination) {
+		String sql = "SELECT AVG(DISTANCE) AS DISTANCE_AVG FROM flights WHERE ORIGIN_AIRPORT_ID=? && DESTINATION_AIRPORT_ID=?";
+		Double avg_distance = null;
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			
+			st.setInt(1, airport_origin.getId());
+			st.setInt(2, airport_destination.getId());
+			
+			ResultSet rs = st.executeQuery();
+			
+			if(rs.next()) {
+				avg_distance= rs.getDouble("DISTANCE_AVG");
+			}
+
+			conn.close();
+			return avg_distance;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
 }
